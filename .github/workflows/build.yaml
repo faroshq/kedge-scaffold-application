@@ -111,6 +111,9 @@ jobs:
         uses: iloveitaly/github-action-railpack@167ed71230addc378f3fb13122046c09f71c0e5f
         with:
           context: ${{ matrix.context }}
+          # Multi-arch so the images also run on arm64 clusters (Apple Silicon
+          # kind/tilt dev environments); arm64 builds run under QEMU.
+          platforms: linux/amd64,linux/arm64
           push: true
           cache: true
           cache_tag: ${{ steps.image.outputs.name }}:buildcache
