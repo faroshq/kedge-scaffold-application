@@ -1,0 +1,119 @@
+name: Build
+
+# Smoke-tests both tiers, then builds and pushes one Railpack image per
+# component — the same builder App Studio uses for user projects, so a green
+# build here proves the scaffold is buildable exactly the way real projects
+# are built. Pushes happen on main (latest + sha-<commit>) and on v* tags
+# (<tag> + latest); PRs run the smoke tests only.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  smoke:
+    name: Smoke test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: appuser
+          POSTGRES_PASSWORD: pw
+          POSTGRES_DB: appdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U appuser"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: API — install, start, probe
+        shell: bash
+        run: |
+          cd api
+          npm install --no-audit --no-fund
+          PORT=8081 DATABASE_URL=postgres://appuser:pw@localhost:5432/appdb npm start &
+          for i in $(seq 1 30); do
+            curl -fsS localhost:8081/api/health && break
+            sleep 1
+            [ "$i" = 30 ] && exit 1
+          done
+          curl -fsS -X POST -H 'content-type: application/json' \
+            -d '{"body":"smoke"}' localhost:8081/api/messages
+          curl -fsS localhost:8081/api/messages | grep -q smoke
+
+      - name: Web — install, build, serve, probe
+        shell: bash
+        run: |
+          cd web
+          npm install --no-audit --no-fund
+          npm run build
+          PORT=8090 npm start &
+          for i in $(seq 1 15); do
+            curl -fsS localhost:8090/ | grep -qi kedge && exit 0
+            sleep 1
+          done
+          exit 1
+
+  build:
+    name: Build ${{ matrix.component }} image with Railpack
+    needs: smoke
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: web
+            context: "web"
+          - component: api
+            context: "api"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Compute image coordinates
+        id: image
+        shell: bash
+        run: |
+          repo="${GITHUB_REPOSITORY,,}"
+          echo "name=ghcr.io/${repo}/${{ matrix.component }}" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image with Railpack
+        uses: iloveitaly/github-action-railpack@167ed71230addc378f3fb13122046c09f71c0e5f
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          cache: true
+          cache_tag: ${{ steps.image.outputs.name }}:buildcache
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}
+            ${{ steps.image.outputs.name }}:latest

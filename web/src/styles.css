@@ -1,0 +1,84 @@
+:root {
+  color-scheme: light dark;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: start center;
+  background: light-dark(#fafaf8, #101014);
+  color: light-dark(#1a1a1a, #ececec);
+}
+
+.shell {
+  width: min(40rem, 92vw);
+  padding: 3rem 0 4rem;
+}
+
+h1 {
+  font-size: 2.4rem;
+  margin: 0 0 0.25rem;
+}
+
+.subtitle {
+  margin: 0 0 2rem;
+  color: light-dark(#555, #a0a0a0);
+}
+
+.card {
+  border: 1px solid light-dark(#e2e2dc, #2a2a30);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  background: light-dark(#fff, #17171c);
+}
+
+.card h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.fineprint {
+  font-size: 0.8rem;
+  color: light-dark(#888, #777);
+  overflow-wrap: anywhere;
+}
+
+.error {
+  color: #c0392b;
+}
+
+form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid light-dark(#ccc, #3a3a42);
+  background: transparent;
+  color: inherit;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #4361ee;
+  color: #fff;
+  cursor: pointer;
+}
+
+ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+li {
+  margin: 0.25rem 0;
+}

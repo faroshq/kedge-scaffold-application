@@ -1,0 +1,14 @@
+{
+  "name": "kedge-scaffold-application-api",
+  "private": true,
+  "type": "module",
+  "description": "Backend tier of the kedge application scaffold. Served under /api/* on the app's single public URL.",
+  "scripts": {
+    "dev": "node --watch server.mjs",
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}
