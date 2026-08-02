@@ -49,14 +49,14 @@ jobs:
           cd api
           npm install --no-audit --no-fund
           PORT=8081 DATABASE_URL=postgres://appuser:pw@localhost:5432/appdb npm start &
+          # /api/health is a platform contract (AGENTS.md) — every project
+          # keeps it, so it is the one endpoint CI may assert. Do NOT probe
+          # the demo endpoints: projects replace them on their first change.
           for i in $(seq 1 30); do
-            curl -fsS localhost:8081/api/health && break
+            curl -fsS -o /dev/null localhost:8081/api/health && exit 0
             sleep 1
-            [ "$i" = 30 ] && exit 1
           done
-          curl -fsS -X POST -H 'content-type: application/json' \
-            -d '{"body":"smoke"}' localhost:8081/api/messages
-          curl -fsS localhost:8081/api/messages | grep -q smoke
+          exit 1
 
       - name: Web — install, build, serve, probe
         shell: bash
@@ -65,8 +65,12 @@ jobs:
           npm install --no-audit --no-fund
           npm run build
           PORT=8090 npm start &
+          # Structural probe only: the tier must boot and serve a page.
+          # NEVER assert page content here. Projects seeded from this scaffold
+          # replace the page immediately, so a content check (it used to grep
+          # for "kedge") turns every real change into a red build.
           for i in $(seq 1 15); do
-            curl -fsS localhost:8090/ | grep -qi kedge && exit 0
+            curl -fsS -o /dev/null localhost:8090/ && exit 0
             sleep 1
           done
           exit 1
